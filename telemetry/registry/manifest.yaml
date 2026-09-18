@@ -1,0 +1,6 @@
+name: maintainer-cockpit
+description: Maintainer Cockpit application telemetry conventions.
+schema_url: https://github.com/ArthurSens/maintainer-cockpit/schemas/0.1.0
+dependencies:
+  - schema_url: https://opentelemetry.io/schemas/gen-ai-dev/1.42.0-dev
+    registry_path: https://github.com/open-telemetry/semantic-conventions-genai.git@0c87594975195608dc91b3f702e250a7b240c151[model]

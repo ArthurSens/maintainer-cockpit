@@ -1,0 +1,25 @@
+file_format: "1.0-rc.2"
+
+resource:
+  attributes:
+    - name: service.name
+      value: maintainer-cockpit
+
+tracer_provider:
+  processors:
+    - batch:
+        schedule_delay: 1000
+        exporter:
+          otlp_http:
+            endpoint: http://lgtm:4318/v1/traces
+            timeout: 5000
+
+meter_provider:
+  readers:
+    - periodic:
+        interval: 5000
+        timeout: 5000
+        exporter:
+          otlp_http:
+            endpoint: http://lgtm:4318/v1/metrics
+            timeout: 5000

@@ -1,0 +1,53 @@
+# Replace this with the public HTTPS URL used to access the deployment.
+external_base_url: https://maintainer-cockpit.example.com
+
+github:
+  # Refresh GitHub repository data every hour, in UTC.
+  schedule: "0 * * * *"
+  authentication:
+    profiles:
+      example-app:
+        type: github_app
+        # Find these numeric IDs in the GitHub App and installation settings.
+        app_id: 123456
+        installation_id: 12345678
+        private_key:
+          environment: MAINTAINER_COCKPIT_GITHUB_PRIVATE_KEY
+      example-pat:
+        type: fine_grained_pat
+        token:
+          environment: MAINTAINER_COCKPIT_GITHUB_TOKEN
+    owners:
+      example-org:
+        # Profiles are attempted in order. Remove example-pat if fallback is
+        # not wanted, or use only PAT profiles when no GitHub App is available.
+        profiles:
+          - example-app
+          - example-pat
+  user_auth:
+    # OAuth client ID for maintainer sign-in; the client secret stays external.
+    client_id: replace-with-github-oauth-client-id
+    client_secret:
+      environment: MAINTAINER_COCKPIT_GITHUB_CLIENT_SECRET
+
+# Numeric GitHub user IDs allowed to access deployment administration.
+deployment_admins:
+  - 12345678
+
+operations:
+  reload_secret:
+    environment: MAINTAINER_COCKPIT_RELOAD_SECRET
+
+collections:
+  - id: example
+    name: Example organization
+    description: Open pull requests across selected repositories.
+    repositories:
+      # Every repository owner needs a matching route above.
+      - example-org/example-repository
+    # Refresh contribution evidence every Monday at 03:00 UTC.
+    contribution:
+      schedule: "0 3 * * 1"
+    authorization:
+      organizations:
+        - example-org

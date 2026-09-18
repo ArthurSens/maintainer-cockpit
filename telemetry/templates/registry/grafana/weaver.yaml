@@ -1,0 +1,13 @@
+templates:
+  - template: dashboard.json.j2
+    filter: |
+      (.refinements.metrics
+      | map(select(. != null and (.id? | startswith("maintainer_cockpit.gen_ai.client."))))) as $local
+      | .registry.metrics = (
+          (.registry.metrics | map(
+            select(.name as $name | ($local | map(.name) | index($name) | not))
+          )) + $local
+        )
+      | semconv_grouped_metrics({"v2": true})
+    application_mode: single
+    file_name: maintainer-cockpit-genai.json

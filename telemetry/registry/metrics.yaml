@@ -1,0 +1,319 @@
+file_format: definition/2
+imports:
+  metrics:
+    - gen_ai.client.operation.duration
+    - gen_ai.client.token.usage
+
+metrics:
+  - name: maintainer_cockpit.gen_ai.token.details
+    requirement_level: recommended
+    stability: development
+    brief: Provider-native cached-input and reasoning-output token subsets.
+    instrument: histogram
+    unit: "{token}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: maintainer_cockpit.gen_ai.workload
+      - ref: maintainer_cockpit.model_provider
+      - ref: maintainer_cockpit.gen_ai.token.detail
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.gen_ai.content.size
+    requirement_level: recommended
+    stability: development
+    brief: UTF-8 bytes in a semantic model request or validated response component.
+    instrument: histogram
+    unit: "By"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: maintainer_cockpit.gen_ai.workload
+      - ref: maintainer_cockpit.model_provider
+      - ref: maintainer_cockpit.gen_ai.content.direction
+      - ref: maintainer_cockpit.gen_ai.content.component
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.gen_ai.content.items
+    requirement_level: recommended
+    stability: development
+    brief: Items in a semantic model request or validated response component.
+    instrument: histogram
+    unit: "{item}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: maintainer_cockpit.gen_ai.workload
+      - ref: maintainer_cockpit.model_provider
+      - ref: maintainer_cockpit.gen_ai.content.direction
+      - ref: maintainer_cockpit.gen_ai.content.component
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.gen_ai.usage.reports
+    requirement_level: recommended
+    stability: development
+    brief: Availability of input and output token usage in provider responses.
+    instrument: counter
+    unit: "{report}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: maintainer_cockpit.gen_ai.workload
+      - ref: maintainer_cockpit.model_provider
+      - ref: maintainer_cockpit.gen_ai.usage.availability
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+      - ref: gen_ai.token.type
+  - name: maintainer_cockpit.schedule.next_run
+    requirement_level: recommended
+    stability: development
+    brief: Unix timestamp of the next configured periodic operation run.
+    instrument: gauge
+    unit: "s"
+    attributes:
+      - ref: maintainer_cockpit.schedule.operation
+      - ref: maintainer_cockpit.collection
+        requirement_level: recommended
+  - name: maintainer_cockpit.analysis.attempts
+    requirement_level: recommended
+    stability: development
+    brief: Model analysis attempts.
+    instrument: counter
+    unit: "{attempt}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.analysis.successes
+    requirement_level: recommended
+    stability: development
+    brief: Model analyses whose complete response passed product-schema validation.
+    instrument: counter
+    unit: "{analysis}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.analysis.provider_failures
+    requirement_level: recommended
+    stability: development
+    brief: Model-provider request failures.
+    instrument: counter
+    unit: "{failure}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.analysis.schema_validation_failures
+    requirement_level: recommended
+    stability: development
+    brief: Model outputs with one or more sections rejected by the product-owned schema, including partially retained responses.
+    instrument: counter
+    unit: "{failure}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.analysis.unknown
+    requirement_level: recommended
+    stability: development
+    brief: Analysis attempts unavailable for failures outside provider requests and schema validation.
+    instrument: counter
+    unit: "{analysis}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.analysis.stale
+    requirement_level: recommended
+    stability: development
+    brief: Analyses whose replacement work is queued or running.
+    instrument: gauge
+    unit: "{analysis}"
+  - name: maintainer_cockpit.correlation.attempts
+    requirement_level: recommended
+    stability: development
+    brief: Feature correlation attempts.
+    instrument: counter
+    unit: "{attempt}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.correlation.successes
+    requirement_level: recommended
+    stability: development
+    brief: Successfully validated feature correlations.
+    instrument: counter
+    unit: "{correlation}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.correlation.provider_failures
+    requirement_level: recommended
+    stability: development
+    brief: Model-provider correlation request failures.
+    instrument: counter
+    unit: "{failure}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.correlation.schema_validation_failures
+    requirement_level: recommended
+    stability: development
+    brief: Correlation outputs rejected by the product-owned schema.
+    instrument: counter
+    unit: "{failure}"
+    attributes:
+      - ref: maintainer_cockpit.collection
+      - ref: gen_ai.provider.name
+      - ref: gen_ai.request.model
+  - name: maintainer_cockpit.correlation.last_success
+    requirement_level: recommended
+    stability: development
+    brief: Unix timestamp of the last successful correlation by collection.
+    instrument: gauge
+    unit: "s"
+    attributes:
+      - ref: maintainer_cockpit.collection
+  - name: maintainer_cockpit.collection.failures
+    requirement_level: recommended
+    stability: development
+    brief: Repository collection failures.
+    instrument: counter
+    unit: "{failure}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.cache.hits
+    requirement_level: recommended
+    stability: development
+    brief: Pull requests served from cache after matching complete input fingerprints.
+    instrument: counter
+    unit: "{pull_request}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.cache.misses
+    requirement_level: recommended
+    stability: development
+    brief: Pull requests refreshed because no matching cache entry was available.
+    instrument: counter
+    unit: "{pull_request}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.cache.bypasses
+    requirement_level: recommended
+    stability: development
+    brief: Pull requests refreshed while cache use was deliberately bypassed.
+    instrument: counter
+    unit: "{pull_request}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.forced_reconciliations
+    requirement_level: recommended
+    stability: development
+    brief: Administrator-forced full repository reconciliations.
+    instrument: counter
+    unit: "{reconciliation}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.batch.completions
+    requirement_level: recommended
+    stability: development
+    brief: Hydration batches published successfully.
+    instrument: counter
+    unit: "{batch}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.batch.pull_requests
+    requirement_level: recommended
+    stability: development
+    brief: Pull requests published by a completed hydration batch.
+    instrument: histogram
+    unit: "{pull_request}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.batch.retries
+    requirement_level: recommended
+    stability: development
+    brief: Retryable hydration batch failures.
+    instrument: counter
+    unit: "{retry}"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.collection.generation.age
+    requirement_level: recommended
+    stability: development
+    brief: Age of an active durable repository refresh generation.
+    instrument: gauge
+    unit: "s"
+    attributes:
+      - ref: maintainer_cockpit.repository
+  - name: maintainer_cockpit.github.rate_limit_waits
+    requirement_level: recommended
+    stability: development
+    brief: Bounded waits before retrying a GitHub rate-limit response.
+    instrument: counter
+    unit: "{wait}"
+    attributes:
+      - ref: maintainer_cockpit.github.rate_limit.type
+  - name: maintainer_cockpit.github.rate_limit_terminal_failures
+    requirement_level: recommended
+    stability: development
+    brief: GitHub rate-limit responses that exhausted retries or the job budget.
+    instrument: counter
+    unit: "{failure}"
+    attributes:
+      - ref: maintainer_cockpit.github.rate_limit.type
+  - name: maintainer_cockpit.github.route.attempts
+    requirement_level: recommended
+    stability: development
+    brief: Persisted attempts to route a GitHub operation through a credential profile.
+    instrument: counter
+    unit: "{attempt}"
+    attributes:
+      - ref: maintainer_cockpit.github.route.operation
+      - ref: maintainer_cockpit.github.profile.type
+      - ref: maintainer_cockpit.github.route.outcome
+      - ref: maintainer_cockpit.github.failure.category
+  - name: maintainer_cockpit.queue.depth
+    requirement_level: recommended
+    stability: development
+    brief: Number of queued durable jobs.
+    instrument: updowncounter
+    unit: "{job}"
+    attributes:
+      - ref: maintainer_cockpit.queue.type
+  - name: maintainer_cockpit.queue.oldest_age
+    requirement_level: recommended
+    stability: development
+    brief: Age of the oldest queued durable job.
+    instrument: gauge
+    unit: "s"
+    attributes:
+      - ref: maintainer_cockpit.queue.type
+  - name: maintainer_cockpit.collection.last_success
+    requirement_level: recommended
+    stability: development
+    brief: Unix timestamp of the last complete repository collection.
+    instrument: gauge
+    unit: "s"
+    attributes:
+      - ref: maintainer_cockpit.repository
+
+metric_refinements:
+  - id: maintainer_cockpit.gen_ai.client.operation.duration
+    ref: gen_ai.client.operation.duration
+    attributes:
+      - ref: maintainer_cockpit.collection
+        requirement_level: recommended
+      - ref: maintainer_cockpit.gen_ai.workload
+        requirement_level: recommended
+      - ref: maintainer_cockpit.model_provider
+        requirement_level: recommended
+  - id: maintainer_cockpit.gen_ai.client.token.usage
+    ref: gen_ai.client.token.usage
+    attributes:
+      - ref: maintainer_cockpit.collection
+        requirement_level: recommended
+      - ref: maintainer_cockpit.gen_ai.workload
+        requirement_level: recommended
+      - ref: maintainer_cockpit.model_provider
+        requirement_level: recommended

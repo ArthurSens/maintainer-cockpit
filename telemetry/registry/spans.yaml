@@ -1,0 +1,27 @@
+file_format: definition/2
+imports:
+  spans:
+    - gen_ai.inference.client
+
+span_refinements:
+  - id: maintainer_cockpit.gen_ai.inference.client
+    ref: gen_ai.inference.client
+    attributes:
+      - ref: maintainer_cockpit.collection
+        requirement_level: recommended
+      - ref: maintainer_cockpit.gen_ai.workload
+        requirement_level: recommended
+      - ref: maintainer_cockpit.model_provider
+        requirement_level: recommended
+      - ref: maintainer_cockpit.repository
+        requirement_level: recommended
+      - ref: maintainer_cockpit.job.id
+        requirement_level: recommended
+      - ref: maintainer_cockpit.pull_request.number
+        requirement_level: recommended
+      - ref: maintainer_cockpit.correlation.chunk
+        requirement_level: recommended
+      - ref: maintainer_cockpit.correlation.chunks
+        requirement_level: recommended
+      - ref: maintainer_cockpit.schema.version
+        requirement_level: recommended

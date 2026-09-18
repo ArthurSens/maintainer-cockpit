@@ -1,0 +1,18 @@
+github:
+  schedule: "0 * * * *"
+  authentication:
+    profiles:
+      smoke:
+        type: fine_grained_pat
+        token:
+          environment: MAINTAINER_COCKPIT_SMOKE_TOKEN
+    owners:
+      prometheus:
+        profiles: [smoke]
+
+collections:
+  - id: prometheus
+    name: Prometheus
+    description: Container smoke-test collection.
+    repositories:
+      - prometheus/prometheus

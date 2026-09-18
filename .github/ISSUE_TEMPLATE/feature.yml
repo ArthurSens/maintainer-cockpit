@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose an improvement after product discussion
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Maintainer problem
+      description: What problem does this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior without prescribing internal structure.
+    validations:
+      required: true
+  - type: input
+    id: discussion
+    attributes:
+      label: Prior discussion
+      description: Link the GitHub Discussion where this direction was agreed, if applicable.

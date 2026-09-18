@@ -1,0 +1,14 @@
+version: 1
+timeout: 30s
+parallelism: 20
+host_max_conns: 2
+
+validators:
+  - regex: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?(/|$)'
+    type: ignore
+  - regex: '^https?://([^.]+\.)?example\.(com|org)(/|$)'
+    type: ignore
+  - regex: '^https://github\.com/ArthurSens/maintainer-cockpit/security/advisories/new$'
+    type: ignore
+  - regex: '^https://(help|platform)\.openai\.com/'
+    type: ignore

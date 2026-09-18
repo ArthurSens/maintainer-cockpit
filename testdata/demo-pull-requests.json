@@ -1,0 +1,17 @@
+{
+  "pullRequests": [
+    {
+      "collectionID": "prometheus",
+      "repository": "prometheus/prometheus",
+      "number": 123,
+      "title": "Demonstrate the SQLite-backed collection",
+      "author": "octocat",
+      "additions": 42,
+      "deletions": 7,
+      "createdAt": "2026-09-01T15:00:00Z",
+      "updatedAt": "2026-09-08T15:00:00Z",
+      "url": "https://github.com/prometheus/prometheus/pull/123",
+      "reviewState": "approved"
+    }
+  ]
+}

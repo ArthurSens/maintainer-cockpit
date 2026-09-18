@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Maintainer Cockpit</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a href="/" data-route class="brand">
+        <span class="brand-mark" aria-hidden="true">MC</span>
+        <span>Maintainer Cockpit</span>
+      </a>
+      <span id="collection-controls" class="collection-controls"></span>
+      <span class="tagline">Navigate large pull-request backlogs</span>
+      <span id="context-controls" class="context-controls"></span>
+      <span id="viewer-controls" class="viewer-controls"></span>
+    </header>
+    <main id="app" aria-live="polite" aria-busy="true"></main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

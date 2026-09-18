@@ -1,0 +1,29 @@
+name: maintainer-cockpit
+
+services:
+  app:
+    build:
+      context: .
+    image: maintainer-cockpit:dev
+    command:
+      - serve
+      - --config
+      - /etc/maintainer-cockpit/config.yaml
+      - --database
+      - /var/lib/maintainer-cockpit/maintainer-cockpit.db
+      - --listen
+      - 0.0.0.0:8765
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      MAINTAINER_COCKPIT_GITHUB_PRIVATE_KEY: ${MAINTAINER_COCKPIT_GITHUB_PRIVATE_KEY:-}
+      MAINTAINER_COCKPIT_GITHUB_TOKEN: ${MAINTAINER_COCKPIT_GITHUB_TOKEN:-}
+      MAINTAINER_COCKPIT_GITHUB_CLIENT_SECRET: ${MAINTAINER_COCKPIT_GITHUB_CLIENT_SECRET:-}
+      MAINTAINER_COCKPIT_RELOAD_SECRET: ${MAINTAINER_COCKPIT_RELOAD_SECRET:-}
+    volumes:
+      - ./config/maintainer-cockpit.yaml:/etc/maintainer-cockpit/config.yaml:ro
+      - data:/var/lib/maintainer-cockpit
+    restart: unless-stopped
+
+volumes:
+  data:

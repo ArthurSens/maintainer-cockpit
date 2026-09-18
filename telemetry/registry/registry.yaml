@@ -1,0 +1,262 @@
+file_format: definition/2
+attributes:
+  - key: maintainer_cockpit.schedule.operation
+    type:
+      members:
+        - id: github_refresh
+          value: github_refresh
+          stability: development
+        - id: github_contribution
+          value: github_contribution
+          stability: development
+        - id: feature_correlation
+          value: feature_correlation
+          stability: development
+    stability: development
+    brief: Bounded operation name for a reported next-run timestamp, not a cron expression.
+  - key: maintainer_cockpit.collection
+    type: string
+    stability: development
+    brief: Immutable configured collection identifier.
+    examples: [prometheus]
+  - key: maintainer_cockpit.repository
+    type: string
+    stability: development
+    brief: Canonical public GitHub owner/repository identity.
+    examples: [prometheus/prometheus]
+  - key: maintainer_cockpit.gen_ai.workload
+    type:
+      members:
+        - id: analysis
+          value: analysis
+          stability: development
+        - id: correlation
+          value: correlation
+          stability: development
+    stability: development
+    brief: Product workload responsible for one model-provider operation.
+  - key: maintainer_cockpit.model_provider
+    type: string
+    stability: development
+    brief: Administrator-configured model-provider profile name.
+    examples: [production]
+  - key: maintainer_cockpit.gen_ai.content.direction
+    type:
+      members:
+        - id: input
+          value: input
+          stability: development
+        - id: output
+          value: output
+          stability: development
+    stability: development
+    brief: Whether a measured semantic content component is model input or output.
+  - key: maintainer_cockpit.gen_ai.content.component
+    type:
+      members:
+        - id: system_instruction
+          value: system_instruction
+          stability: development
+        - id: output_schema
+          value: output_schema
+          stability: development
+        - id: description
+          value: description
+          stability: development
+        - id: file_paths
+          value: file_paths
+          stability: development
+        - id: evidence
+          value: evidence
+          stability: development
+        - id: diff_evidence
+          value: diff_evidence
+          stability: development
+        - id: pull_request_titles
+          value: pull_request_titles
+          stability: development
+        - id: relationships
+          value: relationships
+          stability: development
+        - id: evaluations
+          value: evaluations
+          stability: development
+        - id: waiting_states
+          value: waiting_states
+          stability: development
+        - id: review_cognitive_load
+          value: review_cognitive_load
+          stability: development
+        - id: groups
+          value: groups
+          stability: development
+        - id: edges
+          value: edges
+          stability: development
+    stability: development
+    brief: Bounded semantic request or response component whose size is measured.
+  - key: maintainer_cockpit.gen_ai.token.detail
+    type:
+      members:
+        - id: cached_input
+          value: cached_input
+          stability: development
+        - id: reasoning_output
+          value: reasoning_output
+          stability: development
+    stability: development
+    brief: Provider-native token usage detail that is a subset of aggregate usage.
+  - key: maintainer_cockpit.gen_ai.usage.availability
+    type:
+      members:
+        - id: available
+          value: available
+          stability: development
+        - id: missing
+          value: missing
+          stability: development
+    stability: development
+    brief: Whether a provider response reported a token usage value.
+  - key: maintainer_cockpit.job.id
+    type: int
+    stability: development
+    brief: Durable work item identifier used only for trace and log correlation.
+  - key: maintainer_cockpit.pull_request.number
+    type: int
+    stability: development
+    brief: Pull request number used only for trace and log correlation.
+  - key: maintainer_cockpit.correlation.chunk
+    type: int
+    stability: development
+    brief: One-based correlation chunk index used only for trace and log correlation.
+  - key: maintainer_cockpit.correlation.chunks
+    type: int
+    stability: development
+    brief: Total correlation chunks used only for trace and log correlation.
+  - key: maintainer_cockpit.schema.version
+    type: string
+    stability: development
+    brief: Product-owned structured-output schema version.
+  - key: maintainer_cockpit.queue.type
+    type:
+      members:
+        - id: collection
+          value: collection
+          stability: development
+        - id: analysis
+          value: analysis
+          stability: development
+        - id: correlation
+          value: correlation
+          stability: development
+    stability: development
+    brief: Durable work queue type.
+  - key: maintainer_cockpit.github.rate_limit.type
+    type:
+      members:
+        - id: primary
+          value: primary
+          stability: development
+        - id: secondary
+          value: secondary
+          stability: development
+    stability: development
+    brief: GitHub primary or secondary rate-limit category.
+  - key: maintainer_cockpit.github.route.operation
+    type:
+      members:
+        - id: discovery
+          value: discovery
+          stability: development
+        - id: hydration
+          value: hydration
+          stability: development
+        - id: progress
+          value: progress
+          stability: development
+        - id: contribution_evidence
+          value: contribution_evidence
+          stability: development
+        - id: pull_request_diff
+          value: pull_request_diff
+          stability: development
+        - id: unknown
+          value: unknown
+          stability: development
+    stability: development
+    brief: Bounded GitHub operation routed through a credential profile.
+  - key: maintainer_cockpit.github.profile.type
+    type:
+      members:
+        - id: github_app
+          value: github_app
+          stability: development
+        - id: fine_grained_pat
+          value: fine_grained_pat
+          stability: development
+        - id: unknown
+          value: unknown
+          stability: development
+    stability: development
+    brief: Bounded credential profile type used for a GitHub route attempt.
+  - key: maintainer_cockpit.github.route.outcome
+    type:
+      members:
+        - id: selected
+          value: selected
+          stability: development
+        - id: advanced
+          value: advanced
+          stability: development
+        - id: failed
+          value: failed
+          stability: development
+        - id: unknown
+          value: unknown
+          stability: development
+    stability: development
+    brief: Bounded outcome of a GitHub route attempt.
+  - key: maintainer_cockpit.github.failure.category
+    type:
+      members:
+        - id: none
+          value: none
+          stability: development
+        - id: route_missing
+          value: route_missing
+          stability: development
+        - id: route_ambiguous
+          value: route_ambiguous
+          stability: development
+        - id: installation_missing
+          value: installation_missing
+          stability: development
+        - id: installation_suspended
+          value: installation_suspended
+          stability: development
+        - id: repository_not_granted
+          value: repository_not_granted
+          stability: development
+        - id: permission_missing
+          value: permission_missing
+          stability: development
+        - id: credential_invalid
+          value: credential_invalid
+          stability: development
+        - id: public_capability_missing
+          value: public_capability_missing
+          stability: development
+        - id: primary_rate_limited
+          value: primary_rate_limited
+          stability: development
+        - id: secondary_rate_limited
+          value: secondary_rate_limited
+          stability: development
+        - id: github_unavailable
+          value: github_unavailable
+          stability: development
+        - id: unknown
+          value: unknown
+          stability: development
+    stability: development
+    brief: Bounded failure category for a GitHub route attempt, or none.
