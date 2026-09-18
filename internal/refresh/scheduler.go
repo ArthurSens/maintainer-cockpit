@@ -273,6 +273,18 @@ func (s *Scheduler) processPhased(
 				result.Attempts, collectErr, generation, failureLogged,
 			)
 		}
+		// Persist progress evidence and advance its durable checkpoint as soon as
+		// collection succeeds, rather than waiting on the later publishing phase.
+		// A repository with heavy review activity can take several attempts to
+		// finish publishing; without an early checkpoint here, each retry would
+		// re-scan the same unbounded historical window from scratch forever.
+		if err := s.recordProgress(
+			parentContext, job.Repository,
+			result.Progress.ProgressEvents, result.Progress.ReviewThreads,
+			result.Progress.CollectedAt,
+		); err != nil {
+			return err
+		}
 		payload, err := json.Marshal(result.Progress)
 		if err != nil {
 			return fmt.Errorf("encode staged progress for %q: %w", job.Repository, err)
@@ -446,8 +458,22 @@ func (s *Scheduler) publishSnapshot(
 		job.Repository, snapshot.CacheHits, snapshot.CacheMisses, snapshot.CacheBypasses,
 	)
 	telemetry.RecordForcedReconciliation(job.Repository, job.Forced)
-	progressEvents := make([]storage.ProgressEvent, 0, len(snapshot.ProgressEvents))
-	for _, event := range snapshot.ProgressEvents {
+	return true, nil
+}
+
+// recordProgress persists progress evidence and advances its durable
+// checkpoint. Safe to call as soon as collection succeeds: it depends on
+// nothing from the hydration/publishing side, so an earlier checkpoint here
+// can never be undone by a later, unrelated failure.
+func (s *Scheduler) recordProgress(
+	ctx context.Context,
+	repository string,
+	events []githubapp.ProgressEvent,
+	threads []githubapp.ReviewThreadState,
+	collectedAt time.Time,
+) error {
+	progressEvents := make([]storage.ProgressEvent, 0, len(events))
+	for _, event := range events {
 		progressEvents = append(progressEvents, storage.ProgressEvent{
 			ID: event.ID, ActorID: event.ActorID, ActivityType: event.ActivityType,
 			Repository: event.Repository, Number: event.Number, Title: event.Title,
@@ -455,8 +481,8 @@ func (s *Scheduler) publishSnapshot(
 			OccurredAt: event.OccurredAt, CollectionIDs: event.CollectionIDs,
 		})
 	}
-	reviewThreads := make([]storage.ReviewThreadState, 0, len(snapshot.ReviewThreads))
-	for _, thread := range snapshot.ReviewThreads {
+	reviewThreads := make([]storage.ReviewThreadState, 0, len(threads))
+	for _, thread := range threads {
 		reviewThreads = append(reviewThreads, storage.ReviewThreadState{
 			ID: thread.ID, Resolved: thread.Resolved, ResolvedBy: thread.ResolvedBy,
 			Repository: thread.Repository, Number: thread.Number, Title: thread.Title,
@@ -465,11 +491,11 @@ func (s *Scheduler) publishSnapshot(
 		})
 	}
 	if err := s.store.RecordProgressSnapshot(
-		ctx, job.Repository, progressEvents, reviewThreads, completedAt,
+		ctx, repository, progressEvents, reviewThreads, collectedAt,
 	); err != nil && !errors.Is(err, storage.ErrRepositoryNotConfigured) {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
 func (s *Scheduler) processHydrationBatch(
