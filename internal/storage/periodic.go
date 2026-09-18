@@ -61,7 +61,8 @@ func (s *Store) EnqueueAllRefreshes(ctx context.Context, now time.Time) error {
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE refresh_generations
 		SET rediscovery_requested = 1
-		WHERE refresh_job_id IN (
+		WHERE phase = 'hydrating'
+		  AND refresh_job_id IN (
 			SELECT id FROM refresh_jobs WHERE status IN ('queued', 'running')
 		)
 	`); err != nil {
