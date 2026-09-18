@@ -74,6 +74,49 @@ func enqueueAnalysisForPRTx(
 	return nil
 }
 
+// enqueueAnalysisOrDiffForPRTx requests analysis for a PR, first routing
+// through diff-evidence collection when none is cached yet for the current
+// head. This keeps explicit analysis requests (e.g. reanalyze) from wedging
+// a queued job that ClaimAnalysis's diff-evidence join can never satisfy.
+func enqueueAnalysisOrDiffForPRTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	collectionID, repository string,
+	number int,
+	forced bool,
+	scheduledFor time.Time,
+) error {
+	var headSHA string
+	var changedFiles int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT head_sha, changed_files FROM pull_requests WHERE repository = ? AND number = ?
+	`, repository, number).Scan(&headSHA, &changedFiles); err != nil {
+		return fmt.Errorf("load diff head for %s#%d: %w", repository, number, err)
+	}
+	if headSHA == "" {
+		return enqueueAnalysisForPRTx(ctx, tx, collectionID, repository, number, forced, scheduledFor)
+	}
+	var completeness string
+	err := tx.QueryRowContext(ctx, `
+		SELECT completeness FROM pull_request_diff_evidence
+		WHERE repository = ? AND number = ? AND head_sha = ?
+	`, repository, number, headSHA).Scan(&completeness)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("load cached diff evidence for %s#%d: %w", repository, number, err)
+	}
+	if completeness == "complete" || completeness == "partial" || completeness == "unavailable" {
+		return enqueueAnalysisForPRTx(ctx, tx, collectionID, repository, number, forced, scheduledFor)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT OR IGNORE INTO pull_request_diff_jobs (
+			repository, number, head_sha, changed_files, status, scheduled_for
+		) VALUES (?, ?, ?, ?, 'queued', ?)
+	`, repository, number, headSHA, changedFiles, formatTime(scheduledFor)); err != nil {
+		return fmt.Errorf("enqueue diff for %s#%d: %w", repository, number, err)
+	}
+	return nil
+}
+
 // EnqueueCollectionAnalysis explicitly requests every current PR in a
 // collection. Active duplicate work is coalesced.
 func (s *Store) EnqueueCollectionAnalysis(
@@ -139,7 +182,7 @@ func (s *Store) EnqueueCollectionAnalysis(
 		} else {
 			enqueued++
 		}
-		if err := enqueueAnalysisForPRTx(
+		if err := enqueueAnalysisOrDiffForPRTx(
 			ctx, tx, collectionID, identity.repository, identity.number, forced, scheduledFor,
 		); err != nil {
 			return 0, 0, err
