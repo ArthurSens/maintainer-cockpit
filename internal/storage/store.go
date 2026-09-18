@@ -396,6 +396,7 @@ func (s *Store) initialize(ctx context.Context) error {
 	const schema = `
 PRAGMA foreign_keys = ON;
 PRAGMA busy_timeout = 5000;
+PRAGMA temp_store = MEMORY;
 
 CREATE TABLE IF NOT EXISTS collections (
 	id TEXT PRIMARY KEY,
