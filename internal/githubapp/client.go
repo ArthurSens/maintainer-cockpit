@@ -1241,6 +1241,9 @@ func (a *AncillaryClient) CollectAncillaryAuthorEvidence(
 	ctx context.Context, authorID int64, login string,
 ) (AncillaryAuthorEvidence, error) {
 	c := a.client
+	// Public quotas are shared by every author. Let the durable queue wait for
+	// their reset instead of sleeping in a worker or exhausting its deadline.
+	ctx = context.WithValue(ctx, rateLimitDeadlineKey{}, c.now().UTC())
 	result := AncillaryAuthorEvidence{
 		AuthorID: authorID, Login: login, Complete: true, CollectedAt: c.now().UTC(),
 	}

@@ -66,6 +66,14 @@ Analysis attempts unavailable for failures outside provider requests and schema 
 - Unit: `{analysis}`
 - Attributes: `gen_ai.provider.name` `gen_ai.request.model` `maintainer_cockpit.collection`
 
+## `maintainer_cockpit.author_evidence.attempts`
+
+Persisted public author collection outcomes, including durable quota deferrals.
+
+- Instrument: `counter`
+- Unit: `{attempt}`
+- Attributes: `maintainer_cockpit.author_evidence.outcome`
+
 ## `maintainer_cockpit.collection.batch.completions`
 
 Hydration batches published successfully.

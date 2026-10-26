@@ -1476,7 +1476,17 @@ async function renderAuthor(collectionID, login) {
       }),
       element("p", {
         class: "meta",
-        text: `Collected ${new Date(data.collectedAt).toLocaleString()}. ` +
+        text: data.ancillaryEvidence?.lastSuccessfulAt
+          ? `Account and activity evidence last collected ${new Date(data.ancillaryEvidence.lastSuccessfulAt).toLocaleString()}.`
+          : "Account and activity evidence has not been successfully collected.",
+      }),
+      element("p", {
+        class: "meta",
+        text: `Account and activity collection: ${data.ancillaryEvidence?.status || "pending"}. ` +
+          (data.ancillaryEvidence?.error ? `${data.ancillaryEvidence.error} ` : "") +
+          (data.ancillaryEvidence?.nextAttemptAt
+            ? `Next eligible attempt ${new Date(data.ancillaryEvidence.nextAttemptAt).toLocaleString()}. `
+            : "") +
           "This signal never changes PR quality or contribution level.",
       }),
     ]),

@@ -5,6 +5,14 @@ imports:
     - gen_ai.client.token.usage
 
 metrics:
+  - name: maintainer_cockpit.author_evidence.attempts
+    requirement_level: recommended
+    stability: development
+    brief: Persisted public author collection outcomes, including durable quota deferrals.
+    instrument: counter
+    unit: "{attempt}"
+    attributes:
+      - ref: maintainer_cockpit.author_evidence.outcome
   - name: maintainer_cockpit.gen_ai.token.details
     requirement_level: recommended
     stability: development

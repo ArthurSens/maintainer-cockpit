@@ -80,6 +80,33 @@ schema failures leave the last successful public groups intact.
 
 ## Retention and audit
 
+### Retry public author evidence
+
+To enqueue account profiles and recent activity for a collection's current
+open-PR authors without recollecting repository counts or PR snapshots:
+
+```sh
+maintainer-cockpit refresh-authors \
+  --config /etc/maintainer-cockpit/config.yaml \
+  --database /var/lib/maintainer-cockpit/maintainer-cockpit.db \
+  --collection prometheus-exporters
+```
+
+Active duplicates are coalesced. The command preserves public request pacing
+and existing rate-limit cooldowns. A large collection may take several hours
+to finish under unauthenticated quotas.
+
+Verify the queue with `maintainer_cockpit.queue.depth` and queue type
+`author_evidence`. The counter `maintainer_cockpit.author_evidence.attempts`
+reports `success`, `deferred`, and `failed` outcomes. Deferred jobs remain in
+queue depth. Logs use `author_evidence_collected`, `author_evidence_deferred`,
+and `author_evidence_failed` event names and correlate with
+`author_evidence.collect` traces. Logs and traces include the durable job ID;
+metrics never include author identities or job IDs. Deferred logs include the
+retry time and bounded failure category.
+
+### Retained data
+
 At startup and daily, the process removes completed refresh generations,
 analysis and correlation jobs, retained model payloads, and personal progress
 older than three months. Removed collections are hidden immediately and

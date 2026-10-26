@@ -76,10 +76,81 @@ func TestHelpListsAvailableCommands(t *testing.T) {
 	if err := run([]string{"--help"}, &stdout, &stderr); err != nil {
 		t.Fatalf("run(--help) error = %v", err)
 	}
-	for _, command := range []string{"serve", "config-check", "setup-check", "refresh", "reanalyze", "correlate", "version"} {
+	for _, command := range []string{"serve", "config-check", "setup-check", "refresh", "refresh-authors", "reanalyze", "correlate", "version"} {
 		if !strings.Contains(stdout.String(), command) {
 			t.Errorf("stdout = %q, want command %q", stdout.String(), command)
 		}
+	}
+}
+
+func TestRefreshAuthorsCommandCoalescesWithoutRefreshingRepositories(t *testing.T) {
+	t.Parallel()
+	directory := t.TempDir()
+	configPath := filepath.Join(directory, "config.yaml")
+	databasePath := filepath.Join(directory, "app.db")
+	if err := os.WriteFile(configPath, []byte(testCommandConfig(`
+collections:
+  - id: exporters
+    name: Exporters
+    repositories: [prometheus/node_exporter]
+    contribution:
+      schedule: "0 3 * * 1"
+`)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := storage.Open(databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	if err := store.SyncCollections(t.Context(), []config.Collection{{
+		ID: "exporters", Name: "Exporters", Repositories: []string{"prometheus/node_exporter"},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ReplaceRepositorySnapshot(t.Context(), "prometheus/node_exporter", []storage.PullRequest{{
+		Repository: "prometheus/node_exporter", Number: 1, Author: "octocat", AuthorID: 42,
+		Title: "Example", URL: "https://github.com/prometheus/node_exporter/pull/1", CreatedAt: now, UpdatedAt: now,
+	}}, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.EnqueueAuthorEvidenceAfterSnapshot(t.Context(), "prometheus/node_exporter",
+		[]storage.EvidenceAuthor{{ID: 42, Login: "octocat"}}, now); err != nil {
+		t.Fatal(err)
+	}
+	job, err := store.ClaimAncillaryAuthorEvidence(t.Context(), now)
+	if err != nil || job == nil {
+		t.Fatalf("initial claim = %v, %v", job, err)
+	}
+	if err := store.CompleteAncillaryAuthorEvidence(t.Context(), job, now.AddDate(-1, 0, 0), nil, now, nil); err != nil {
+		t.Fatal(err)
+	}
+	_ = store.Close()
+	for _, want := range []string{"1 enqueued", "0 enqueued"} {
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{
+			"refresh-authors", "--config", configPath,
+			"--database", databasePath, "--collection", "exporters",
+		}, &stdout, &stderr); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+		}
+	}
+	store, err = storage.Open(databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if depth, err := store.AncillaryQueueDepth(t.Context()); err != nil || depth != 1 {
+		t.Fatalf("queue depth = %d, %v", depth, err)
+	}
+	if job, err := store.ClaimRefresh(t.Context(), now.Add(time.Hour)); err != nil || job != nil {
+		t.Fatalf("author refresh enqueued repository work: %v, %v", job, err)
+	}
+	if job, err := store.ClaimAncillaryAuthorEvidence(t.Context(), now); err != nil || job != nil {
+		t.Fatalf("command reset public pacing: %v, %v", job, err)
 	}
 }
 
