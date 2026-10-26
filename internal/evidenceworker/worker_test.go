@@ -61,6 +61,47 @@ func TestRunOnceCompletesRepositoryAndAncillaryEvidence(t *testing.T) {
 	}
 }
 
+func TestAncillaryRateLimitDefersAndEventuallyRecovers(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 10, 26, 3, 0, 0, 0, time.UTC)
+	store := evidenceStore(t, now, []storage.EvidenceAuthor{{ID: 42, Login: "octocat"}})
+	reset := now.Add(time.Hour)
+	calls := 0
+	worker := New(store, repositoryCollectorFunc(func(context.Context, int64, string, string, string) (githubapp.ContributionResult, error) {
+		return githubapp.ContributionResult{}, nil
+	}), ancillaryCollectorFunc(func(context.Context, int64, string) (githubapp.AncillaryAuthorEvidence, error) {
+		calls++
+		if calls == 1 {
+			return githubapp.AncillaryAuthorEvidence{}, &githubapp.RateLimitError{
+				Reason: "primary", RateLimitResetUnix: reset.Unix(), StatusCode: 403,
+			}
+		}
+		return githubapp.AncillaryAuthorEvidence{AccountCreatedAt: now.AddDate(-1, 0, 0)}, nil
+	}), Options{Concurrency: 2, Now: func() time.Time { return now }})
+	if err := worker.RunOnce(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	if depth, err := store.AncillaryQueueDepth(ctx); err != nil || depth != 1 {
+		t.Fatalf("deferred queue depth = %d, %v", depth, err)
+	}
+	now = reset
+	if err := worker.RunOnce(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("calls before reset safety margin = %d", calls)
+	}
+	now = reset.Add(5 * time.Second)
+	if err := worker.RunOnce(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	status, err := store.AuthorEvidenceStatus(ctx, 42)
+	if err != nil || calls != 2 || status.Status != "complete" || status.Error != "" {
+		t.Fatalf("recovered author = %+v, calls %d, error %v", status, calls, err)
+	}
+}
+
 func TestRepositoryFailurePreservesPriorEvidenceAndCoreFreshness(t *testing.T) {
 	t.Parallel()
 

@@ -221,11 +221,12 @@ type AuthorHistory struct {
 
 // AuthorContext is the public collection-specific author read model.
 type AuthorContext struct {
-	ID               int64                   `json:"id"`
-	Login            string                  `json:"login"`
-	AccountCreatedAt *time.Time              `json:"accountCreatedAt,omitempty"`
-	CollectedAt      time.Time               `json:"collectedAt"`
-	Contribution     contribution.Evaluation `json:"contribution"`
+	ID                int64                   `json:"id"`
+	Login             string                  `json:"login"`
+	AccountCreatedAt  *time.Time              `json:"accountCreatedAt,omitempty"`
+	CollectedAt       time.Time               `json:"collectedAt"`
+	Contribution      contribution.Evaluation `json:"contribution"`
+	AncillaryEvidence AuthorEvidenceStatus    `json:"ancillaryEvidence"`
 }
 
 // PullRequestFile persists provider churn.
@@ -715,6 +716,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS ancillary_author_jobs_active
 	ON ancillary_author_jobs(author_id)
 	WHERE status IN ('queued', 'running');
 
+CREATE TABLE IF NOT EXISTS ancillary_queue (
+	id INTEGER PRIMARY KEY CHECK (id = 1),
+	next_attempt_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS analysis_results (
 	collection_id TEXT NOT NULL,
 	repository TEXT NOT NULL,
@@ -1014,6 +1020,14 @@ CREATE INDEX IF NOT EXISTS retained_analysis_results_by_expiry
 	}
 	if err := ensureRouteOperations(ctx, s.db); err != nil {
 		return err
+	}
+	for _, column := range []struct{ name, definition string }{
+		{"ancillary_attempted_at", "TEXT"},
+		{"ancillary_error", "TEXT NOT NULL DEFAULT ''"},
+	} {
+		if err := ensureColumn(ctx, s.db, "authors", column.name, column.definition); err != nil {
+			return err
+		}
 	}
 	return s.validateCurrentSchema(ctx)
 }
@@ -3121,6 +3135,18 @@ func (s *Store) claimEvidenceJob(
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if table == "ancillary_author_jobs" {
+		var blocked bool
+		if err := tx.QueryRowContext(ctx, `SELECT
+			EXISTS(SELECT 1 FROM ancillary_queue WHERE next_attempt_at > ?)
+			OR EXISTS(SELECT 1 FROM ancillary_author_jobs WHERE status = 'running')`,
+			formatTime(now)).Scan(&blocked); err != nil {
+			return err
+		}
+		if blocked {
+			return sql.ErrNoRows
+		}
+	}
 	row := tx.QueryRowContext(ctx, `SELECT `+columns+` FROM `+table+
 		` WHERE status = 'queued' AND scheduled_for <= ? ORDER BY scheduled_for, id LIMIT 1`,
 		formatTime(now))
@@ -3139,6 +3165,19 @@ func (s *Store) claimEvidenceJob(
 	}
 	if affected != 1 {
 		return fmt.Errorf("evidence job %d was claimed concurrently", *id)
+	}
+	if table == "ancillary_author_jobs" {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO ancillary_queue (id, next_attempt_at) VALUES (1, ?)
+			ON CONFLICT(id) DO UPDATE SET next_attempt_at = excluded.next_attempt_at`,
+			formatTime(now.Add(AncillaryRequestInterval))); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE authors SET ancillary_attempted_at = ?
+			WHERE id = (SELECT author_id FROM ancillary_author_jobs WHERE id = ?)`,
+			formatTime(now), *id); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
@@ -3203,15 +3242,17 @@ func (s *Store) CompleteAncillaryAuthorEvidence(
 		_, err = tx.ExecContext(ctx, `
 			UPDATE authors SET account_created_at = ?, recent_activity_json = ?,
 				history_complete = 1, collected_at = ?,
-				ancillary_status = 'complete', ancillary_collected_at = ?
+				ancillary_status = 'complete', ancillary_collected_at = ?,
+				ancillary_attempted_at = ?, ancillary_error = ''
 			WHERE id = ?
 		`, formatTime(accountCreatedAt), string(encoded), formatTime(collectedAt),
-			formatTime(collectedAt), job.AuthorID)
+			formatTime(collectedAt), formatTime(collectedAt), job.AuthorID)
 		if err != nil {
 			return err
 		}
 	} else if _, err := tx.ExecContext(ctx,
-		`UPDATE authors SET ancillary_status = 'failed' WHERE id = ?`, job.AuthorID,
+		`UPDATE authors SET ancillary_status = 'failed', ancillary_attempted_at = ?,
+		 ancillary_error = 'Public author collection failed.' WHERE id = ?`, formatTime(collectedAt), job.AuthorID,
 	); err != nil {
 		return err
 	}
@@ -3770,6 +3811,10 @@ func (s *Store) GetAuthorContext(
 		Repositories: repositories, CurrentOpen: currentOpen, RecentActivity: recent,
 	}, policy, now)
 	result.Contribution = evaluation
+	result.AncillaryEvidence, err = s.AuthorEvidenceStatus(ctx, result.ID)
+	if err != nil {
+		return AuthorContext{}, err
+	}
 	return result, nil
 }
 

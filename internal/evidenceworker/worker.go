@@ -6,8 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/ArthurSens/maintainer-cockpit/internal/githubapp"
 	"github.com/ArthurSens/maintainer-cockpit/internal/storage"
@@ -306,17 +310,54 @@ func (w *Worker) processAncillary(
 ) error {
 	ctx, cancel := context.WithTimeout(parent, w.timeout)
 	defer cancel()
+	ctx, span := otel.Tracer(telemetry.InstrumentationName).Start(ctx, "author_evidence.collect")
+	defer span.End()
+	span.SetAttributes(attribute.Int64("maintainer_cockpit.job.id", job.ID))
 	evidence, collectErr := w.ancillary.CollectAncillaryAuthorEvidence(
 		ctx, job.AuthorID, job.Login,
 	)
 	if parent.Err() != nil {
 		return nil
 	}
+	at := w.now().UTC()
+	outcome := "success"
+	metadata := githubapp.BoundedFailureMetadata(collectErr)
+	if collectErr != nil {
+		outcome = "failed"
+	}
+	if collectErr != nil && (metadata.Category == githubapp.FailurePrimaryRateLimited ||
+		metadata.Category == githubapp.FailureSecondaryRateLimited) {
+		retryAt := at.Add(storage.AncillaryRequestInterval)
+		if reset := time.Unix(metadata.RateLimitResetUnix, 0).Add(5 * time.Second); reset.After(retryAt) {
+			retryAt = reset
+		}
+		if after := at.Add(metadata.RetryAfter + 5*time.Second); after.After(retryAt) {
+			retryAt = after
+		}
+		if err := w.store.RequeueAncillaryAuthorEvidence(parent, job, at, retryAt, metadata.Detail); err != nil {
+			return fmt.Errorf("defer ancillary evidence job: %w", err)
+		}
+		span.SetAttributes(attribute.String("maintainer_cockpit.author_evidence.outcome", "deferred"))
+		telemetry.RecordAuthorEvidence(ctx, "deferred")
+		slog.InfoContext(ctx, "author evidence deferred", "event", "author_evidence_deferred",
+			"job_id", job.ID, "failure_category", string(metadata.Category),
+			"retry_at", retryAt.Format(time.RFC3339), "http_status", metadata.HTTPStatus)
+		return nil
+	}
 	if err := w.store.CompleteAncillaryAuthorEvidence(
 		parent, job, evidence.AccountCreatedAt, evidence.RecentActivity,
-		w.now().UTC(), collectErr,
+		at, collectErr,
 	); err != nil {
 		return fmt.Errorf("complete ancillary evidence job: %w", err)
+	}
+	span.SetAttributes(attribute.String("maintainer_cockpit.author_evidence.outcome", outcome))
+	telemetry.RecordAuthorEvidence(ctx, outcome)
+	if collectErr != nil {
+		slog.WarnContext(ctx, "author evidence failed", "event", "author_evidence_failed",
+			"job_id", job.ID, "failure_category", string(metadata.Category),
+			"http_status", metadata.HTTPStatus, "endpoint", metadata.Endpoint)
+	} else {
+		slog.InfoContext(ctx, "author evidence collected", "event", "author_evidence_collected", "job_id", job.ID)
 	}
 	return nil
 }

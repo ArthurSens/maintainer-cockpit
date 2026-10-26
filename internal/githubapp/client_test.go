@@ -536,6 +536,48 @@ func TestAncillarySearchPreservesRequestError(t *testing.T) {
 	}
 }
 
+func TestAncillaryQuotaIsReturnedToQueueWithoutSleeping(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 10, 26, 3, 0, 0, 0, time.UTC)
+	for _, secondary := range []bool{false, true} {
+		t.Run(strconv.FormatBool(secondary), func(t *testing.T) {
+			calls := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				if r.Header.Get("Authorization") != "" {
+					t.Error("public collection used configured credentials")
+				}
+				if secondary {
+					w.Header().Set("Retry-After", "120")
+				} else {
+					w.Header().Set("X-RateLimit-Remaining", "0")
+					w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(now.Add(time.Hour).Unix(), 10))
+				}
+				http.Error(w, `{"message":"rate limited"}`, http.StatusForbidden)
+			}))
+			defer server.Close()
+			client, err := NewPAT(PATOptions{
+				Token: "unused", BaseURL: server.URL,
+				Now: func() time.Time { return now }, Sleep: func(context.Context, time.Duration) error {
+					t.Fatal("ancillary request slept instead of returning quota metadata")
+					return nil
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = NewAncillaryClient(client).CollectAncillaryAuthorEvidence(context.Background(), 42, "octocat")
+			var limited *RateLimitError
+			if !errors.As(err, &limited) || calls != 1 {
+				t.Fatalf("quota error = %v, calls %d", err, calls)
+			}
+			if secondary && limited.RetryAfter != 120*time.Second {
+				t.Errorf("retry after = %v", limited.RetryAfter)
+			}
+		})
+	}
+}
+
 func TestCollectPreservesPerFileChurn(t *testing.T) {
 	t.Parallel()
 

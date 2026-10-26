@@ -40,3 +40,28 @@ failed or truncated account, collection-history, or recent-activity request
 marks author history incomplete. In that state, Maintainer Cockpit suppresses
 both the contribution level and experimental signal instead of judging partial
 evidence.
+
+## Public author evidence retries
+
+Repository contribution counts use configured repository credentials. Account
+profiles and recent public activity use a separate unauthenticated queue. That
+queue starts at most one author every 65 seconds, with only one author in flight.
+This pacing stays below GitHub's public profile and search quotas; other users
+of the same outgoing IP can still consume the shared allowance.
+
+When GitHub rate-limits public collection, the job remains queued and the entire
+public queue waits until the later of its pacing slot, the reset time, or
+`Retry-After`, with a five-second reset margin. These waits survive restarts and
+do not block repository evidence, diffs, or core refreshes. Successful evidence
+is preserved during retries. Permanent failures wait for the next scheduled or
+explicit refresh.
+
+Author pages distinguish the last successful account/activity collection from
+the last attempt and show a queued retry's next eligible time. An initialized
+author record is not a successful collection. The author API adds
+`ancillaryEvidence` with `status`, `lastAttemptAt`, `lastSuccessfulAt`,
+`nextAttemptAt`, and a bounded `error` when available.
+
+Existing databases gain the queue cooldown table and diagnostic columns
+automatically; recreation is not required. Back up persistent data before
+upgrading as usual.

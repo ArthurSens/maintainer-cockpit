@@ -47,6 +47,7 @@ func newRootCommandWithBuildInformation(
 		newCorrelateCommand(stdout),
 		newReanalyzeCommand(stdout),
 		newRefreshCommand(stdout),
+		newRefreshAuthorsCommand(stdout),
 		newServeCommand(stdout, stderr),
 		newSetupCheckCommand(stdout),
 		newVersionCommand(stdout, build),

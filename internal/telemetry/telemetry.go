@@ -69,6 +69,10 @@ func Initialize(ctx context.Context, store *storage.Store) (*Runtime, error) {
 		_ = sdk.Shutdown(context.Background())
 		return nil, err
 	}
+	if err := registerAuthorEvidenceInstruments(store); err != nil {
+		_ = sdk.Shutdown(context.Background())
+		return nil, err
+	}
 	return runtime, nil
 }
 

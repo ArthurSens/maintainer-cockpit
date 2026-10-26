@@ -1,5 +1,19 @@
 file_format: definition/2
 attributes:
+  - key: maintainer_cockpit.author_evidence.outcome
+    type:
+      members:
+        - id: success
+          value: success
+          stability: development
+        - id: deferred
+          value: deferred
+          stability: development
+        - id: failed
+          value: failed
+          stability: development
+    stability: development
+    brief: Bounded outcome of one public author evidence attempt.
   - key: maintainer_cockpit.schedule.operation
     type:
       members:
@@ -140,6 +154,9 @@ attributes:
   - key: maintainer_cockpit.queue.type
     type:
       members:
+        - id: author_evidence
+          value: author_evidence
+          stability: development
         - id: collection
           value: collection
           stability: development
